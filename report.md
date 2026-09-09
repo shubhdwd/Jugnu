@@ -446,13 +446,13 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 26 | Notifications | ✅ (service) |
 | 27 | Offline Sync | ✅ |
 | 28 | Security | ✅ |
-| 29 | Tests | ⚠️ 35 unit pass; no integration/E2E in Jest |
+| 29 | Tests | ✅ 35 unit pass + Playwright E2E 20/20 (committed `tests/e2e/`); integration layer pending |
 | 30 | Docker | ✅ |
 | — | CI/CD | ❌ Not done |
 | — | Deployment | ❌ Not done |
 | — | Logging / Monitoring | ⚠️ Morgan + console only |
 
-**Summary:** ✅ 25 fully done · ⚠️ 4 partial (Migrations, Language/voice, Tests, Logging/Monitoring) · ❌ 2 backlog (CI/CD, Deployment)
+**Summary:** ✅ 27 fully done · ⚠️ 3 partial (Migrations, Language/voice, Tests-integration) · ⚠️ +1 extra (Logging/Monitoring) · ❌ 2 backlog (CI/CD, Deployment)
 
 ---
 

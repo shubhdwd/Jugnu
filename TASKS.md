@@ -1,6 +1,6 @@
 # Jugnu — Task List & Progress
 
-**Last updated:** 2026-09-09
+**Last updated:** 2026-09-10
 
 ---
 
@@ -23,7 +23,7 @@
 - [x] 6 cognitive games
 - [x] Game sessions + attempts
 - [x] AI ability estimation + difficulty + trends
-- [x] Personalization system (3 levels)
+- [x] Personalization system (2 levels: GENERIC, FULL)
 - [x] Game assets CRUD
 - [x] Reminder system
 - [x] Cognitive insights
@@ -64,6 +64,7 @@
 ---
 
 ## Master Completion Checklist (from Jugnu_Complete, 30 items)
-- ✅ Done: Node/Express, TypeScript, PostgreSQL, Prisma, Schema, Auth, Roles, Patients, Consent, Games, Sessions, Attempts, Personalization, AI Ability, Adaptive Difficulty, Personal Baseline, Trend Analysis, Clinical Review, Caregiver Dashboard, Health Worker API, Caregiver Mood, Connected Family, Notifications, Offline Sync, Security, Docker (24)
-- ⚠️ Partial: Migrations (db push, no migration files), Language/Voice (Assamese only), Reminders (list bug 404), Tests (no integration/E2E), Logging/Monitoring (morgan only) (5)
+- ✅ Done: Node/Express, TypeScript, PostgreSQL, Prisma, Schema, Auth, Roles, Patients, Consent, Games, Sessions, Attempts, Personalization, AI Ability, Adaptive Difficulty, Personal Baseline, Trend Analysis, Clinical Review, Caregiver Dashboard, Health Worker API, Caregiver Mood, Connected Family, Notifications, Offline Sync, Security, Reminders, Docker (27)
+- ⚠️ Partial: Migrations (db push, no migration files), Language/Voice (Assamese only), Tests (integration layer missing; unit 35 + Playwright E2E 20/20 done) (3)
+- ⚠️ Extra (outside 30): Logging/Monitoring (morgan only)
 - ❌ Backlog: CI/CD, Deployment (2)
