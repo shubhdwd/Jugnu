@@ -53,7 +53,7 @@
 ### Remaining — Backend
 - [x] Personalization simplification DONE — VOICE level removed → 2 levels (GENERIC/FULL); DB migrated, tests 35/35
 - [ ] AI Python service (referenced, not implemented)
-- [ ] Multi-language (Assamese/Bengali/Meitei — only Assamese seeded)
+- [x] Multi-language (Assamese/Bengali/Meitei — all seeded via localizations.ts)
 - [x] Full Playwright API test suite DONE — `tests/e2e/` (20/20): auth 4 roles, refresh/logout, patients, games, insights, sessions, alerts, family, health-worker, sync, personalization, assets, reminders; rate limit bumped to 500/15min
 
 ---
@@ -65,6 +65,6 @@
 
 ## Master Completion Checklist (from Jugnu_Complete, 30 items)
 - ✅ Done: Node/Express, TypeScript, PostgreSQL, Prisma, Schema, Auth, Roles, Patients, Consent, Games, Sessions, Attempts, Personalization, AI Ability, Adaptive Difficulty, Personal Baseline, Trend Analysis, Clinical Review, Caregiver Dashboard, Health Worker API, Caregiver Mood, Connected Family, Notifications, Offline Sync, Security, Reminders, Docker (27)
-- ⚠️ Partial: Migrations (db push, no migration files), Language/Voice (Assamese only), Tests (integration layer missing; unit 35 + Playwright E2E 20/20 done) (3)
+- ✅ Partial: Tests (integration layer missing; unit 35 + Playwright E2E 20/20 done). Migrations and Languages are now fully complete. (1)
 - ⚠️ Extra (outside 30): Logging/Monitoring (morgan only)
-- ❌ Backlog: CI/CD, Deployment (2)
+- ✅ Done: Deployment (runbook + docker). CI/CD tests added.

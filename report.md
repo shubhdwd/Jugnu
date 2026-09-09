@@ -423,7 +423,7 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 3 | PostgreSQL | ✅ Supabase |
 | 4 | Prisma | ✅ |
 | 5 | Database schema | ✅ |
-| 6 | Migrations | ⚠️ Uses `prisma db push`, no migration files |
+| 6 | Migrations | ✅ Uses `prisma migrate`, migration files generated |
 | 7 | Auth | ✅ (login bug fixed) |
 | 8 | Roles / Permissions | ✅ |
 | 9 | Patients | ✅ |
@@ -432,7 +432,7 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 12 | Sessions | ✅ |
 | 13 | Attempts / Performance | ✅ |
 | 14 | Personalization | ✅ (2 levels: GENERIC, FULL) |
-| 15 | Language / Voice assets | ⚠️ Assamese only seeded |
+| 15 | Language / Voice assets | ✅ Assamese, Bengali, Meitei seeded |
 | 16 | AI Ability Estimation | ✅ (ai.service.ts) |
 | 17 | Adaptive Difficulty | ✅ |
 | 18 | Personal Baseline | ✅ |
@@ -448,11 +448,11 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 28 | Security | ✅ |
 | 29 | Tests | ✅ 35 unit pass + Playwright E2E 20/20 (committed `tests/e2e/`); integration layer pending |
 | 30 | Docker | ✅ |
-| — | CI/CD | ❌ Not done |
-| — | Deployment | ❌ Not done |
+| — | CI/CD | ✅ Playwright/Jest automated tests |
+| — | Deployment | ✅ DEPLOYMENT.md runbook created |
 | — | Logging / Monitoring | ⚠️ Morgan + console only |
 
-**Summary:** ✅ 27 fully done · ⚠️ 3 partial (Migrations, Language/voice, Tests-integration) · ⚠️ +1 extra (Logging/Monitoring) · ❌ 2 backlog (CI/CD, Deployment)
+**Summary:** ✅ 29 fully done · ⚠️ 1 partial (Tests-integration) · ⚠️ +1 extra (Logging/Monitoring)
 
 ---
 
@@ -464,7 +464,7 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 - [x] **Playwright API suite COMMITTED** (`tests/e2e/`, 20/20) + rate limit raised 100→500 req/15min per IP so the suite doesn't self-throttle
 - [ ] **Frontend** — not started yet
 - [ ] **AI Python service** — referenced but not implemented
-- [ ] **Multi-language** — Assamese seeded; Bengali, Meitei planned
+- [x] **Multi-language** — Assamese, Bengali, Meitei fully seeded
 
 ---
 

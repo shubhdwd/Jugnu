@@ -41,6 +41,29 @@ export async function getBySlug(slug: string) {
   return game;
 }
 
+export async function getLocalizations(gameId: string) {
+  const game = await prisma.game.findUnique({ where: { id: gameId } });
+  if (!game) throw new NotFoundError('Game not found');
+
+  const localizations = await prisma.gameLocalization.findMany({
+    where: { gameId, active: true },
+    orderBy: { language: 'asc' },
+  });
+
+  return {
+    gameId,
+    slug: game.slug,
+    languages: localizations.map(l => ({
+      id: l.id,
+      language: l.language,
+      name: l.name,
+      description: l.description,
+      instructions: l.instructions,
+      audioPackUrl: l.audioPackUrl,
+    })),
+  };
+}
+
 export async function getRecommended(patientId: string, userId: string, userRole: string) {
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
+import { upsertLocalizations } from "./localizations";
 
 const prisma = new PrismaClient();
 
@@ -433,6 +434,16 @@ async function main() {
   });
 
   console.log("Games created");
+
+  // ─── Game Localizations (expandable language packs) ───────────────────────────
+
+  const gamesBySlug = new Map(
+    [objectMatch, routineSequencing, patternRecall, whosCalling, rememberWhen, myDailyRoutine].map(g => [g.slug, g]),
+  );
+
+  await upsertLocalizations(prisma, gamesBySlug);
+
+  console.log("Game localizations created");
 
   // ─── Game Assets (for personalized games) ────────────────────────────────────
 

@@ -46,6 +46,15 @@ export async function getBySlug(req: Request, res: Response, next: NextFunction)
   }
 }
 
+export async function getLocalizations(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await service.getLocalizations(req.params.id as string);
+    sendSuccess(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getRecommended(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await service.getRecommended(
