@@ -53,8 +53,11 @@ describeDb('Personalization Module Integration', () => {
     it('should upsert personalization', async () => {
       const patient = await prisma.patient.findFirst({
         where: { personalization: { level: 'GENERIC' } },
+        include: { personalization: true },
       });
       if (!patient) return;
+
+      const originalLevel = patient.personalization?.level ?? 'GENERIC';
 
       const updated = await prisma.personalization.upsert({
         where: { patientId: patient.id },
@@ -63,6 +66,11 @@ describeDb('Personalization Module Integration', () => {
       });
 
       expect(updated.level).toBe('FULL');
+
+      await prisma.personalization.update({
+        where: { patientId: patient.id },
+        data: { level: originalLevel },
+      });
     });
   });
 

@@ -17,6 +17,9 @@
     "test:e2e": "playwright test",
     "lint": "tsc --noEmit"
   },
+  "prisma": {
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
