@@ -4,6 +4,7 @@ import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 import { BadRequestError, UnauthorizedError, ConflictError, NotFoundError } from '../../utils/errors';
 import { UserRole } from '@prisma/client';
+import { logger } from '../../utils/logger';
 
 interface TokenPayload {
   id: string;
@@ -56,6 +57,8 @@ export async function register(data: {
     data: { refreshTokens: [tokens.refreshToken] },
   });
 
+  logger.info('auth.register_success', { userId: user.id, role: user.role });
+
   return { user, ...tokens };
 }
 
@@ -64,10 +67,16 @@ export async function login(identifier: string, password: string) {
   if (!user) {
     user = await prisma.user.findUnique({ where: { phone: identifier } });
   }
-  if (!user) throw new UnauthorizedError('Invalid credentials');
+  if (!user) {
+    logger.warn('auth.login_failed', { identifier });
+    throw new UnauthorizedError('Invalid credentials');
+  }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new UnauthorizedError('Invalid credentials');
+  if (!valid) {
+    logger.warn('auth.login_failed', { identifier });
+    throw new UnauthorizedError('Invalid credentials');
+  }
 
   const tokens = generateTokens({ id: user.id, role: user.role, name: user.name });
   
@@ -76,6 +85,8 @@ export async function login(identifier: string, password: string) {
     where: { id: user.id },
     data: { refreshTokens: [...existingTokens.slice(-4), tokens.refreshToken] },
   });
+
+  logger.info('auth.login_success', { userId: user.id, role: user.role });
 
   return {
     user: { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role },
@@ -86,6 +97,8 @@ export async function login(identifier: string, password: string) {
 export async function logout(userId: string, refreshToken?: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new NotFoundError('User not found');
+
+  logger.info('auth.logout', { userId });
 
   if (refreshToken) {
     const tokens = (user.refreshTokens as string[]) || [];

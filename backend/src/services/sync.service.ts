@@ -196,7 +196,10 @@ export async function processSyncEvent(
     return { success: true, eventId: event.eventId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error(`Sync event processing failed: ${event.eventId}`, error);
+    logger.error('sync.failed', {
+      eventId: event.eventId,
+      error: { name: error instanceof Error ? error.name : 'Error', message: errorMessage },
+    });
 
     await prisma.syncEvent.update({
       where: { id: syncEvent.id },

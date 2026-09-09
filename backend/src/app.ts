@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { v4 as uuidv4 } from 'uuid';
 import { env } from './config/env';
-import { morganMiddleware, logger } from './utils/logger';
+import { requestLogger } from './utils/logger';
 import errorHandler from './middleware/error.middleware';
 
 // Route imports
@@ -40,8 +41,12 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Logging
-app.use(morganMiddleware);
+// Request ID + logging
+app.use((req, _res, next) => {
+  (req as { id?: string }).id = (req.headers['x-request-id'] as string) || uuidv4();
+  next();
+});
+app.use(requestLogger);
 
 // Health check
 app.get('/health', (_req, res) => {
