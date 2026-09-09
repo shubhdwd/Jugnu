@@ -1,0 +1,450 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  FAMILY_CAREGIVER
+  CONNECTED_FAMILY
+  HEALTH_WORKER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ConsentType {
+  DATA_COLLECTION
+  GAME_PLAY
+  PHOTO_USAGE
+  VOICE_RECORDING
+  FAMILY_SHARING
+  HEALTH_WORKER_ACCESS
+}
+
+enum GameType {
+  OBJECT_MATCH
+  ROUTINE_SEQUENCING
+  PATTERN_RECALL
+  WHO_IS_CALLING
+  REMEMBER_WHEN
+  MY_DAILY_ROUTINE
+}
+
+enum GameCategory {
+  OBJECT_RECOGNITION
+  SEQUENCING
+  PATTERN_RECALL
+  REMINISCENCE
+  PERSONALIZED_ROUTINE
+}
+
+enum GameDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  ADAPTIVE
+}
+
+enum CompletionStatus {
+  COMPLETED
+  PARTIAL
+  ABANDONED
+  TIMEOUT
+}
+
+enum PersonalizationLevel {
+  GENERIC
+  FULL
+}
+
+enum ReminderType {
+  MEDICATION
+  HYDRATION
+  ACTIVITY
+  APPOINTMENT
+}
+
+enum ReminderRepeat {
+  NONE
+  DAILY
+  WEEKLY
+  CUSTOM
+}
+
+enum TrendDirection {
+  IMPROVING
+  STABLE
+  DECLINING
+}
+
+enum AlertType {
+  SUGGESTED_CLINICAL_REVIEW
+  CAREGIVER_SUPPORT
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum AccessLevel {
+  PRIMARY
+  VIEW_ONLY
+}
+
+enum HealthWorkerType {
+  ANM
+  ASHA
+  CHO
+  DOCTOR
+}
+
+enum SyncEventType {
+  GAME_ATTEMPT
+  SESSION_START
+  SESSION_END
+  MOOD_CHECKIN
+  REMINDER_DISMISSED
+  PERSONALIZATION_UPDATE
+}
+
+enum SyncStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum CaregiverMood {
+  HAPPY
+  NEUTRAL
+  SAD
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  phone         String?  @unique
+  email         String?  @unique
+  passwordHash  String
+  role          UserRole
+  refreshTokens String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  patients                Patient[]
+  consentsGranted         Consent[]
+  familyMembers           FamilyMember[]
+  healthWorker            HealthWorker?
+
+  @@map("users")
+}
+
+model Patient {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  age             Int
+  gender          Gender
+  language        String   @default("assamese")
+  village         String?
+  location        String?
+  roomWard        String?
+  caregiverId     String   @db.Uuid
+  profilePhotoUrl String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  caregiver         User               @relation(fields: [caregiverId], references: [id])
+  consents          Consent[]
+  sessions          Session[]
+  personalization   Personalization?
+  reminders         Reminder[]
+  moodCheckins      CaregiverMoodCheckin[]
+  insights          Insight[]
+  alerts            Alert[]
+  familyMembers     FamilyMember[]
+  gameAssets        GameAsset[]
+
+  @@index([caregiverId])
+  @@index([village])
+  @@map("patients")
+}
+
+model Consent {
+  id          String       @id @default(uuid()) @db.Uuid
+  patientId   String       @db.Uuid
+  consentType ConsentType
+  granted     Boolean
+  grantedBy   String       @db.Uuid
+  timestamp   DateTime     @default(now())
+  note        String?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  granter User    @relation(fields: [grantedBy], references: [id])
+
+  @@unique([patientId, consentType])
+  @@map("consents")
+}
+
+model Game {
+  id                     String              @id @default(uuid()) @db.Uuid
+  name                   String
+  slug                   String              @unique
+  type                   GameType
+  category               GameCategory
+  description            String
+  personalizationLevel   PersonalizationLevel @default(GENERIC)
+  language               String              @default("assamese")
+  imageUrl               String?
+  contentUrl             String?
+  active                 Boolean             @default(true)
+  difficultyMin          GameDifficulty      @default(EASY)
+  difficultyMax          GameDifficulty      @default(HARD)
+  targetSuccessMin       Float               @default(0.70)
+  targetSuccessMax       Float               @default(0.80)
+  configuration          Json?
+  metadata               Json?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  sessions Session[]
+  assets   GameAsset[]
+
+  @@index([type])
+  @@index([category])
+  @@index([personalizationLevel])
+  @@index([language])
+  @@index([active])
+  @@map("games")
+}
+
+model Session {
+  id              String           @id @default(uuid()) @db.Uuid
+  patientId       String           @db.Uuid
+  gameId          String           @db.Uuid
+  startedAt       DateTime         @default(now())
+  endedAt         DateTime?
+  completionStatus CompletionStatus?
+  offlineCreated  Boolean          @default(false)
+  offlineEventId  String?          @unique
+  syncedAt        DateTime?
+  metadata        Json?
+
+  patient  Patient  @relation(fields: [patientId], references: [id])
+  game     Game     @relation(fields: [gameId], references: [id])
+  attempts Attempt[]
+
+  @@index([patientId])
+  @@index([gameId])
+  @@index([startedAt])
+  @@map("sessions")
+}
+
+model Attempt {
+  id             String         @id @default(uuid()) @db.Uuid
+  sessionId      String         @db.Uuid
+  questionId     String
+  correct        Boolean
+  responseTimeMs Int?
+  difficulty     GameDifficulty
+  score          Float?
+  selectedAnswer String?
+  timestamp      DateTime       @default(now())
+  offlineEventId String?        @unique
+  metadata       Json?
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([timestamp])
+  @@map("attempts")
+}
+
+model Personalization {
+  id              String               @id @default(uuid()) @db.Uuid
+  patientId       String               @unique @db.Uuid
+  level           PersonalizationLevel @default(GENERIC)
+  photosMetadata  Json?
+  voiceMetadata   Json?
+  preferences     Json?
+  updatedAt       DateTime             @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("personalizations")
+}
+
+model GameAsset {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @db.Uuid
+  gameId      String   @db.Uuid
+  contentType String
+  label       String
+  fileUrl     String?
+  transcript  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  game    Game    @relation(fields: [gameId], references: [id])
+
+  @@unique([patientId, gameId, label])
+  @@index([patientId])
+  @@index([gameId])
+  @@map("game_assets")
+}
+
+model Reminder {
+  id                String         @id @default(uuid()) @db.Uuid
+  patientId         String         @db.Uuid
+  type              ReminderType
+  title             String
+  message           String
+  scheduledAt       DateTime
+  repeatRule        ReminderRepeat @default(NONE)
+  customRepeatRule  String?
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([active])
+  @@index([scheduledAt])
+  @@map("reminders")
+}
+
+model CaregiverMoodCheckin {
+  id        String       @id @default(uuid()) @db.Uuid
+  patientId String       @db.Uuid
+  mood      CaregiverMood
+  notes     String?
+  createdAt DateTime     @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([createdAt])
+  @@map("caregiver_mood_checkins")
+}
+
+model Insight {
+  id              String        @id @default(uuid()) @db.Uuid
+  patientId       String        @db.Uuid
+  cognitiveDomain String
+  abilityEstimate Float
+  baselineValue   Float?
+  currentValue    Float?
+  trend           TrendDirection?
+  explanation     String
+  modelVersion    String?
+  createdAt       DateTime      @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([cognitiveDomain])
+  @@index([createdAt])
+  @@map("insights")
+}
+
+model Alert {
+  id          String        @id @default(uuid()) @db.Uuid
+  patientId   String        @db.Uuid
+  type        AlertType
+  severity    AlertSeverity
+  message     String
+  status      AlertStatus   @default(ACTIVE)
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  resolvedAt  DateTime?
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
+  @@index([status])
+  @@index([type])
+  @@map("alerts")
+}
+
+model FamilyMember {
+  id           String      @id @default(uuid()) @db.Uuid
+  patientId    String      @db.Uuid
+  userId       String      @db.Uuid
+  relationship String
+  accessLevel  AccessLevel @default(VIEW_ONLY)
+  createdAt    DateTime    @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([patientId, userId])
+  @@map("family_members")
+}
+
+model HealthWorker {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @unique @db.Uuid
+  area      String
+  workerType HealthWorkerType
+  phone     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([area])
+  @@map("health_workers")
+}
+
+model SyncEvent {
+  id            String         @id @default(uuid()) @db.Uuid
+  deviceId      String
+  eventType     SyncEventType
+  payload       Json
+  eventId       String         @unique
+  status        SyncStatus     @default(PENDING)
+  errorMessage  String?
+  processedAt   DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([eventId])
+  @@index([deviceId])
+  @@index([status])
+  @@map("sync_events")
+}
+
+model ResourcePack {
+  id        String   @id @default(uuid()) @db.Uuid
+  language  String
+  packKey   String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([language, packKey])
+  @@map("resource_packs")
+}
