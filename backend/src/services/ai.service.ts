@@ -2,6 +2,7 @@ import { prisma } from '../config/database';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { GameDifficulty } from '@prisma/client';
+import { callAiService } from './ai.client';
 
 const DIFFICULTY_WEIGHTS: Record<GameDifficulty, number> = {
   [GameDifficulty.EASY]: 0.2,
@@ -134,9 +135,9 @@ export async function selectNextActivity(
     })),
   );
 
-  const ability = estimateAbility(allAttempts);
+  const ability = await estimateAbilityRemote(allAttempts);
   const recentAttempts = allAttempts.slice(-10).map((a) => ({ correct: a.correct }));
-  const difficulty = selectDifficulty(ability, recentAttempts);
+  const difficulty = await selectDifficultyRemote(ability, recentAttempts);
 
   const nextGame = await prisma.game.findFirst({
     where: { id: gameId, active: true },
@@ -158,7 +159,7 @@ export async function analyzeSession(sessionId: string): Promise<void> {
     return;
   }
 
-  const ability = estimateAbility(
+  const ability = await estimateAbilityRemote(
     session.attempts.map((a) => ({
       correct: a.correct,
       responseTimeMs: a.responseTimeMs,
@@ -180,9 +181,9 @@ export async function analyzeSession(sessionId: string): Promise<void> {
     { abilityEstimate: ability, createdAt: new Date() },
   ];
 
-  const trend = detectTrend(allInsightData);
+  const trend = await detectTrendRemote(allInsightData);
 
-  const explanation = generateExplanation(session.game.type, ability, trend);
+  const explanation = await generateExplanationRemote(session.game.type, ability, trend);
 
   await prisma.insight.create({
     data: {
@@ -202,7 +203,7 @@ export async function analyzeSession(sessionId: string): Promise<void> {
     take: 50,
   });
 
-  if (checkSustainedDecline(domainInsights)) {
+  if (await checkSustainedDeclineRemote(domainInsights)) {
     const existingAlert = await prisma.alert.findFirst({
       where: {
         patientId: session.patientId,
@@ -249,4 +250,60 @@ export function generateExplanation(
   const abilityPercent = Math.round(abilityEstimate * 100);
 
   return `${domainName} ability ${trendPhrase}. Current estimated ability: ${abilityPercent}%.`;
+}
+
+// ---------- Remote-aware wrappers (Python AI service) ----------
+// When AI_SERVICE_ENABLED=true these delegate to the Python AI service
+// (Jugnu_Complete_Backend_Architecture.pdf §23). On any failure they fall
+// back to the local TypeScript heuristics above.
+
+type Trend = 'IMPROVING' | 'STABLE' | 'DECLINING' | null;
+
+export async function estimateAbilityRemote(
+  attempts: Array<{ correct: boolean; responseTimeMs: number | null; difficulty: GameDifficulty }>,
+): Promise<number> {
+  const remote = await callAiService<{ abilityEstimate: number }>('/ability', {
+    attempts: attempts.map(a => ({ correct: a.correct, responseTimeMs: a.responseTimeMs, difficulty: a.difficulty })),
+  });
+  return remote?.abilityEstimate ?? estimateAbility(attempts);
+}
+
+export async function selectDifficultyRemote(
+  abilityEstimate: number,
+  recentAttempts: Array<{ correct: boolean }>,
+): Promise<GameDifficulty> {
+  const remote = await callAiService<{ difficulty: GameDifficulty }>('/difficulty', {
+    abilityEstimate,
+    recentAttempts,
+  });
+  return remote?.difficulty ?? selectDifficulty(abilityEstimate, recentAttempts);
+}
+
+export async function detectTrendRemote(
+  insights: Array<{ abilityEstimate: number; createdAt: Date }>,
+): Promise<Trend> {
+  const remote = await callAiService<{ trend: Trend }>('/trend', {
+    insights: insights.map(i => ({ abilityEstimate: i.abilityEstimate, createdAt: i.createdAt.toISOString() })),
+  });
+  return remote?.trend ?? detectTrend(insights);
+}
+
+export async function checkSustainedDeclineRemote(
+  insights: Array<{ abilityEstimate: number; cognitiveDomain: string }>,
+): Promise<boolean> {
+  const remote = await callAiService<{ sustainedDecline: boolean }>('/decline', { insights });
+  return remote?.sustainedDecline ?? checkSustainedDecline(insights);
+}
+
+export async function generateExplanationRemote(
+  cognitiveDomain: string,
+  abilityEstimate: number,
+  trend: string | null,
+): Promise<string> {
+  const remote = await callAiService<{ explanation: string }>('/explain', {
+    cognitiveDomain,
+    abilityEstimate,
+    trend,
+  });
+  return remote?.explanation ?? generateExplanation(cognitiveDomain, abilityEstimate, trend);
 }

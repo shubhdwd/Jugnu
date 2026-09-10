@@ -1,5 +1,5 @@
 import { prisma } from '../../config/database';
-import { detectTrend } from '../../services/ai.service';
+import { detectTrendRemote } from '../../services/ai.service';
 
 export async function getByPatient(patientId: string) {
   return prisma.insight.findMany({
@@ -15,9 +15,9 @@ export async function getTrends(patientId: string) {
   });
 
   const domains = [...new Set(insights.map(i => i.cognitiveDomain))];
-  const trends = domains.map(domain => {
+  const trends = await Promise.all(domains.map(async domain => {
     const domainInsights = insights.filter(i => i.cognitiveDomain === domain);
-    const trend = detectTrend(domainInsights.map(i => ({
+    const trend = await detectTrendRemote(domainInsights.map(i => ({
       abilityEstimate: i.abilityEstimate,
       createdAt: i.createdAt,
     })));
@@ -29,7 +29,7 @@ export async function getTrends(patientId: string) {
       dataPoints: domainInsights.length,
       latestInsight: latest || null,
     };
-  });
+  }));
 
   return trends;
 }

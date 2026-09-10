@@ -20,6 +20,8 @@ import alertRoutes, { adminAlertRouter } from './modules/alerts/alerts.routes';
 import familyRoutes from './modules/family/family.routes';
 import healthWorkerRoutes from './modules/health-workers/health-workers.routes';
 import syncRoutes from './modules/sync/sync.routes';
+import consentRoutes, { consentRouter } from './modules/consents/consents.routes';
+import notificationRoutes from './modules/notifications/notifications.routes';
 
 const app = express();
 
@@ -53,6 +55,17 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'jugnu-backend' });
 });
 
+// API root info
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    service: 'jugnu-backend',
+    message: 'Jugnu cognitive health API. All endpoints under /api. See /health for uptime.',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -67,6 +80,9 @@ app.use('/api/reminders', reminderRoutes);
 app.use('/api/alerts', adminAlertRouter);
 app.use('/api/family', familyRoutes);
 app.use('/api/health-workers', healthWorkerRoutes);
+app.use('/api/patients', consentRouter);
+app.use('/api/consents', consentRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/sync', syncRoutes);
 
 // 404 handler

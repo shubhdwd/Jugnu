@@ -6,28 +6,27 @@ import { v4 as uuidv4 } from 'uuid';
 export async function processSyncEvent(
   event: { eventId: string; deviceId: string; type: SyncEventType; timestamp: string; payload: Record<string, unknown> },
 ): Promise<{ success: boolean; eventId: string; error?: string }> {
+  let syncEvent;
   const existing = await prisma.syncEvent.findUnique({ where: { eventId: event.eventId } });
   if (existing) {
     if (existing.status === 'PROCESSED') {
       return { success: true, eventId: event.eventId };
     }
-    if (existing.status === 'FAILED') {
-      await prisma.syncEvent.update({
-        where: { eventId: event.eventId },
-        data: { status: 'PENDING', errorMessage: null },
-      });
-    }
+    syncEvent = await prisma.syncEvent.update({
+      where: { id: existing.id },
+      data: { status: 'PENDING', errorMessage: null },
+    });
+  } else {
+    syncEvent = await prisma.syncEvent.create({
+      data: {
+        eventId: event.eventId,
+        deviceId: event.deviceId,
+        eventType: event.type,
+        payload: event.payload as any,
+        status: 'PENDING',
+      },
+    });
   }
-
-  const syncEvent = await prisma.syncEvent.create({
-    data: {
-      eventId: event.eventId,
-      deviceId: event.deviceId,
-      eventType: event.type,
-      payload: event.payload as any,
-      status: 'PENDING',
-    },
-  });
 
   try {
     switch (event.type) {
@@ -96,9 +95,19 @@ export async function processSyncEvent(
           offlineEventId?: string;
         };
 
-        const existingSession = await prisma.session.findUnique({
-          where: { offlineEventId: payload.offlineEventId || undefined },
-        });
+        let existingSession: { id: string } | null = null;
+        if (payload.offlineEventId) {
+          existingSession = await prisma.session.findUnique({
+            where: { offlineEventId: payload.offlineEventId },
+            select: { id: true },
+          });
+        }
+        if (!existingSession) {
+          existingSession = await prisma.session.findUnique({
+            where: { id: payload.sessionId },
+            select: { id: true },
+          });
+        }
 
         if (!existingSession) {
           await prisma.session.create({

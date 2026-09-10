@@ -7,6 +7,6 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["prisma/seed.ts"],
+  "include": ["prisma/seed.ts", "prisma/add-demo-users.ts"],
   "exclude": ["node_modules", "dist", "tests", "src"]
 }

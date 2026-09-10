@@ -6,7 +6,7 @@ Cognitive health platform for elderly patients in rural India. Uses gamified cog
 
 ---
 
-## Current Status (as of 2026-09-09)
+## Current Status (as of 2026-09-10)
 
 | Area | Status |
 |---|---|
@@ -16,8 +16,12 @@ Cognitive health platform for elderly patients in rural India. Uses gamified cog
 | Route registration (insights/alerts/reminders/personalization) | ✅ **FIXED** — 12/12 endpoints HTTP-verified |
 | Refresh token endpoint | ✅ **ADDED** — `POST /api/auth/refresh` |
 | Backend test suite (Jest) | ✅ 35 passed, 0 failed |
+| Live API test (62 checks, 5 roles) | ✅ **62/62 PASS** — all 42 endpoints verified |
+| Consent API | ✅ **BUILT** — `src/modules/consents/` full CRUD, 6 endpoints verified |
+| Notification API | ✅ **BUILT** — `Notification` model + migration + `src/modules/notifications/`, dead service wired up |
+| Sync event processing | ✅ **FIXED** — `SESSION_START` no longer fails on missing `offlineEventId` |
+| **Python AI service** | ✅ **BUILT** — `D:\SIH\ai-service` FastAPI (:8000), PDF §23 wired, fallback-safe, pytest 29/29 |
 | Frontend | ⬜ Not started |
-| AI Python service | ⬜ Referenced, not implemented |
 
 ---
 
@@ -56,7 +60,7 @@ D:\SIH\
     ├── README.md
     │
     ├── prisma/
-    │   ├── schema.prisma            # 15 models, 13 enums
+    │   ├── schema.prisma            # 16 models, 13 enums
     │   └── seed.ts                  # Demo data seeder
     │
     ├── src/
@@ -76,11 +80,11 @@ D:\SIH\
     │   ├── services/
     │   │   ├── ai.service.ts        # Ability estimation, difficulty, trends
     │   │   ├── encryption.service.ts # AES-256-CBC
-    │   │   ├── notification.service.ts # Alerts + reminders
-    │   │   └── sync.service.ts      # Offline-first sync
+    │   │   ├── notification.service.ts # Notifications + reminders (wired up 2026-09-10)
+    │   │   └── sync.service.ts      # Offline-first sync (SESSION_START bug FIXED)
     │   │
     │   ├── modules/
-    │   │   ├── auth/                # Register, login, logout, me
+    │   │   ├── auth/                # Register, login, logout, me, refresh
     │   │   ├── users/               # User list (admin only)
     │   │   ├── patients/            # Patient CRUD + access control
     │   │   ├── games/               # Game catalog + recommendations
@@ -91,6 +95,8 @@ D:\SIH\
     │   │   ├── alerts/              # Clinical + caregiver alerts
     │   │   ├── family/              # Family member linking
     │   │   ├── health-workers/      # Health worker tools
+    │   │   ├── consents/            # Consent CRUD + upsert (NEW)
+    │   │   ├── notifications/       # Notification CRUD (NEW)
     │   │   └── sync/                # Offline event sync
     │   │
     │   ├── types/
@@ -123,7 +129,7 @@ D:\SIH\
 
 ---
 
-## Database Models (15)
+## Database Models (16)
 
 | Model | Purpose |
 |---|---|
@@ -142,6 +148,7 @@ D:\SIH\
 | `FamilyMember` | Patient ↔ family user links |
 | `HealthWorker` | Health worker profile (area, type) |
 | `SyncEvent` | Offline sync event log |
+| `Notification` | Per-user notifications (title, message, type, read) |
 | `ResourcePack` | Language content packs |
 
 ---
@@ -262,11 +269,33 @@ GET    /api/sync/status/:deviceId
 POST   /api/sync/retry/:deviceId
 ```
 
-> **Note:** All paths above are live and verified as of 2026-09-09 after the route-registration fixes. The earlier double `/patients/` prefix and missing routes are resolved (see Bug Log).
+### Consents
+```
+GET    /api/patients/:patientId/consents
+POST   /api/patients/:patientId/consents   (upsert — unique patientId+consentType)
+GET    /api/consents/:id
+PATCH  /api/consents/:id                   (grant or revoke via granted flag)
+DELETE /api/consents/:id
+```
+6 consent types: `DATA_COLLECTION`, `GAME_PLAY`, `PHOTO_USAGE`, `VOICE_RECORDING`, `FAMILY_SHARING`, `HEALTH_WORKER_ACCESS`
+
+### Notifications
+```
+GET    /api/notifications            (current user; ?unread=true filter)
+GET    /api/notifications/:id
+POST   /api/notifications            (admin, family caregiver)
+PATCH  /api/notifications/:id        (mark read)
+PATCH  /api/notifications/read-all/mark  (mark all read)
+DELETE /api/notifications/:id
+```
+
+> **Note:** All paths above are live and verified as of 2026-09-10. The earlier double `/patients/` prefix and missing routes are resolved (see Bug Log). Consent + Notification modules added 2026-09-10.
 
 ---
 
 ## AI Service Logic
+
+**Dual-mode** since 2026-09-10: local TypeScript heuristics (`ai.service.ts`) are the always-available fallback. When `AI_SERVICE_ENABLED=true`, the same logic runs in the **Python AI service** (`D:\SIH\ai-service`, FastAPI :8000) via `ai.client.ts` — matching Jugnu_Complete_Backend_Architecture.pdf §23 (Backend ↔ AI Communication). Unreachable/disabled → automatic local fallback, no errors.
 
 ### Ability Estimation
 - Starts at 0.5 (baseline)
@@ -338,6 +367,11 @@ POST   /api/sync/retry/:deviceId
 
 ## Bug Log
 
+### ✅ FIXED — Health worker seed scoping (2026-09-10)
+- **Root cause:** Seed set health worker `area: "Kamrup Rural"` but patients have village values (`Hajo`, `Sualkuchi`, ...). `health-workers.service.ts` matches `where: { village: hw.area }` exactly → HW patients/priority-list/visit-plan returned empty.
+- **Fix:** Seed now uses `area: "Hajo"` (Dr. Bipin Kalita, ASHA) → matches patient Lakshmi Devi.
+- **Verified live:** ME/patients/priority-list/visit-plan all return Lakshmi; Jest 35/35, Playwright 20/20, fresh migrate reset + reseed, full 26-step live demo re-run (all 200, invalid input 400).
+
 ### ✅ FIXED — Login/Register validation bug (2026-09-09)
 - **Root cause:** Route Zod schemas wrap the payload as `z.object({ body: z.object({...}) })`, but `validate.middleware.ts` parsed `req.body` against that wrapper and stored the whole wrapper back, so controllers read `req.body.identifier` → `undefined` → Prisma 500 on login.
 - **Fix:** `src/middleware/validate.middleware.ts` now detects the `body`-wrapper shape (via `_def.shape()`, since `shape` is a **function** in Zod 3, not an object), validates the raw payload against the inner `body` schema, and assigns the parsed inner object to `req.body`. Clients post directly `{ identifier, password }`.
@@ -350,14 +384,6 @@ POST   /api/sync/retry/:deviceId
   - ✅ **Playwright API suite: 20/20 passed (committed)** — `backend/tests/e2e/` (`npm run test:e2e`), covers auth (4 roles), refresh/logout, patients, games, insights/trends/ability, sessions+mood, alerts (status update), family, health-worker APIs, sync, personalization (FULL upsert, VOICE rejected), assets, reminders CRUD with cleanup
   - ✅ **Backend Jest suite: 35 passed, 0 failed** (no regressions)
 - **Backend rebuilt and running** at `http://localhost:3000`.
-
-### 🐛 OPEN — Route registration mismatches (pre-existing, NOT fixed)
-These existed before the login fix; auth/login are unaffected. Found during verification:
-1. **Insights/alerts double-prefix:** `insights.routes.ts` / `alerts.routes.ts` define paths starting with `/patients/...` but are mounted under `/api/patients`. Real URL is `/api/patients/patients/:id/insights` (works); documented `/api/patients/:id/insights` → 404.
-2. **Reminders list never registered:** `reminders.routes.ts` exports `reminderRouter` (GET/POST list), but `app.ts` imports only default `reminderDetailRouter`. `GET /api/patients/:id/reminders` → 404.
-3. **Personalization GET shadowed:** `personalizationRoutes` `/:patientId` GET is registered after `patientRoutes` `/:id`, so `GET /api/patients/:id` returns the patient, never the personalization.
-4. **Personalization/reminders paths** defined as bare `/:patientId`, so documented sub-paths already work where reachable otherwise.
-- **Fix needed:** Normalize mount paths in `app.ts` + each module's route definitions to match the documented `/api/patients/:id/...` shape.
 
 ### ✅ FIXED — Route-registration bugs (2026-09-09)
 - **Root cause:** Routers were mounted with mismatched prefixes (insights/alerts used a `patients/...` prefix on top of a `/api/patients` mount → double prefix), the reminders list router was never registered, and personalization's bare `:patientId` routes collided with patient detail/update routes.
@@ -378,6 +404,22 @@ These existed before the login fix; auth/login are unaffected. Found during veri
   - ✅ Jest suite: 35 passed, 0 failed (no regressions)
 - **Backend rebuilt and running** at `http://localhost:3000`.
 
+### ✅ FIXED — Sync event processing bug (2026-09-10)
+- **Root cause:** `sync.service.ts` — `SESSION_START` event processing called `prisma.session.findUnique({ where: { offlineEventId: undefined } })` when `offlineEventId` is not passed in the event payload. The Zod schema only requires `payload: z.record(z.unknown())` — it does not enforce `offlineEventId` as a field.
+- **Symptom:** API returns 200 with event marked as `failed` in the response summary. No crash, but event not processed.
+- **Fix:** `SESSION_START` handler now guards against missing `offlineEventId` — first tries `findUnique({ where: { offlineEventId } })`, then falls back to `findUnique({ where: { id: sessionId } })`, and only creates the session if neither exists.
+- **Verified live:** Event without `offlineEventId` → `success: true`, no error; sync status → `{ pending: 0, processed: 1, failed: 0 }`; session created with `offlineCreated: true`.
+
+### ✅ FIXED — Missing Consent API (2026-09-10)
+- **Root cause:** `Consent` model exists in schema (6 types × 4 patients seeded), but no routes, controller, or service file exists.
+- **Fix:** Built `src/modules/consents/` (consents.routes.ts + consents.controller.ts + consents.service.ts), mounted in `app.ts` at `/api/patients` (nested) + `/api/consents` (detail). Upsert logic uses `patientId_consentType` unique compound; PATCH grants or revokes via the `granted` flag and stamps `timestamp`.
+- **Verified live:** 6/6 checks — list, upsert, detail, re-grant, delete, validation 400.
+
+### ✅ FIXED — Missing Notification API (2026-09-10)
+- **Root cause:** `notification.service.ts` exported dead `createNotification()` and `sendReminder()` that were never called; no Notification model or read endpoints.
+- **Fix:** (1) Added `Notification` model + relation to `User`, migrated (`20260910093612_add_notifications`). (2) Built `src/modules/notifications/` (routes + controller + service). (3) Wired up `notification.service.ts` — `createNotification()` now persists to `prisma.notification`. (4) Mounted at `/api/notifications`.
+- **Verified live:** 6/6 checks — list, create, mark read, mark-all-read, unread filter, delete.
+
 ---
 
 ## Completed Features Checklist
@@ -393,7 +435,7 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 - [x] Adaptive difficulty selection
 - [x] Trend detection (linear regression)
 - [x] Sustained decline detection → auto alert
-- [x] Personalization system (3 levels)
+- [x] Personalization system (2 levels: GENERIC, FULL)
 - [x] Game assets CRUD (voice, photos, routine steps)
 - [x] Reminder system (medication, hydration, activity, appointment)
 - [x] Cognitive insights per domain
@@ -427,7 +469,7 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 7 | Auth | ✅ (login bug fixed) |
 | 8 | Roles / Permissions | ✅ |
 | 9 | Patients | ✅ |
-| 10 | Consent | ✅ |
+| 10 | Consent | ✅ | Full CRUD API + upsert (patientId+consentType), 6 types |
 | 11 | Games | ✅ |
 | 12 | Sessions | ✅ |
 | 13 | Attempts / Performance | ✅ |
@@ -443,8 +485,8 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | 23 | Reminders | ✅ List + create + update + delete all live (was ⚠️ list 404) |
 | 24 | Caregiver Mood | ✅ |
 | 25 | Connected Family | ✅ |
-| 26 | Notifications | ✅ (service) |
-| 27 | Offline Sync | ✅ |
+| 26 | Notifications | ✅ **BUILT** — model + migration + CRUD API + dead service wired up (2026-09-10) |
+| 27 | Offline Sync | ✅ **BUG FIXED** — SESSION_START missing offlineEventId (2026-09-10) |
 | 28 | Security | ✅ |
 | 29 | Tests | ✅ 35 unit pass + Playwright E2E 20/20 (committed `tests/e2e/`); integration layer pending |
 | 30 | Docker | ✅ |
@@ -452,19 +494,32 @@ These existed before the login fix; auth/login are unaffected. Found during veri
 | — | Deployment | ✅ DEPLOYMENT.md runbook created |
 | — | Logging / Monitoring | ⚠️ Morgan + console only |
 
-**Summary:** ✅ 29 fully done · ⚠️ 1 partial (Tests-integration) · ⚠️ +1 extra (Logging/Monitoring)
+**Summary:** ✅ **30/30 done** · ⚠️ 1 partial (Tests-integration) · ⚠️ 1 extra (Logging/Monitoring)
 
 ---
 
 ## Pending / In Progress
 
+### Done (this session — 2026-09-10)
 - [x] **Route-registration bugs FIXED** (insights/alerts/reminders/personalization) — see Bug Log
 - [x] **Refresh token endpoint ADDED** — `POST /api/auth/refresh`
 - [x] **Personalization simplification DONE** — VOICE level removed, collapsed to 2 levels (GENERIC/FULL); schema, seed, recommendation logic, zod validation, sync service, tests, and live DB all updated
 - [x] **Playwright API suite COMMITTED** (`tests/e2e/`, 20/20) + rate limit raised 100→500 req/15min per IP so the suite doesn't self-throttle
-- [ ] **Frontend** — not started yet
-- [ ] **AI Python service** — referenced but not implemented
 - [x] **Multi-language** — Assamese, Bengali, Meitei fully seeded
+- [x] **Full live demo sweep (62/62 PASS)** — 42 endpoints, 5 roles, all tested. See `demo.md`.
+- [x] **Health-worker seed scoping FIXED** — area "Kamrup Rural" → "Hajo"
+- [x] **Consent API BUILT** — `src/modules/consents/` (routes + controller + service), mounted, 6/6 verified
+- [x] **Notification API BUILT** — `Notification` model + migration `20260910093612_add_notifications`, `src/modules/notifications/`, dead `notification.service.ts` wired up, 6/6 verified
+- [x] **Sync bug FIXED** — SESSION_START missing `offlineEventId` guard; verified live (processed 1, failed 0)
+- [x] **New-feature sweep 19/19 PASS** — consents + notifications + sync fix (see `demo.md`)
+- [x] **Python AI service BUILT** — `D:\SIH\ai-service` (FastAPI): `/health`, `/ability`, `/difficulty`, `/trend`, `/decline`, `/explain`, `/analyze-session`; pytest 29/29; backend bridge `src/services/ai.client.ts` + `*Remote` wrappers in `ai.service.ts`; live integration + fallback verified (see `demo.md`)
+
+### Pending — Backend (next session)
+- [ ] **Integration tests** — only unit (35) + E2E (20) done; integration layer missing
+
+### Pending — Non-backend
+- [ ] **Frontend** — not started
+- [ ] **Logging/Monitoring** — only Morgan, no structured logging
 
 ---
 

@@ -1,7 +1,7 @@
 import { prisma } from '../../config/database';
 import { NotFoundError } from '../../utils/errors';
 import { GameType, GameCategory, PersonalizationLevel, Prisma } from '@prisma/client';
-import { selectDifficulty } from '../../services/ai.service';
+import { selectDifficultyRemote } from '../../services/ai.service';
 
 export async function getAll(
   filters: {
@@ -96,7 +96,7 @@ export async function getRecommended(patientId: string, userId: string, userRole
     ? recentAttempts.filter(a => a.correct).length / recentAttempts.length
     : 0.5;
 
-  const difficulty = selectDifficulty(accuracy, recentAttempts.map(a => ({ correct: a.correct })));
+  const difficulty = await selectDifficultyRemote(accuracy, recentAttempts.map(a => ({ correct: a.correct })));
 
   const games = await prisma.game.findMany({ where, orderBy: { createdAt: 'desc' } });
 

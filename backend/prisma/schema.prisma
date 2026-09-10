@@ -157,6 +157,7 @@ model User {
   consentsGranted         Consent[]
   familyMembers           FamilyMember[]
   healthWorker            HealthWorker?
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -456,6 +457,23 @@ model SyncEvent {
   @@index([deviceId])
   @@index([status])
   @@map("sync_events")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
 }
 
 model ResourcePack {

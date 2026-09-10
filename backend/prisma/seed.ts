@@ -80,7 +80,7 @@ async function main() {
     data: {
       id: uid(),
       userId: healthWorkerUser.id,
-      area: "Kamrup Rural",
+      area: "Hajo",
       workerType: "ASHA",
       phone: "9000000004",
     },

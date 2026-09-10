@@ -11,12 +11,20 @@
 - ✅ **Refresh token endpoint ADDED** (`POST /api/auth/refresh`)
 - ✅ Jest: 35 passed, 0 failed
 - ✅ HTTP end-to-end verification: 12/12 fixed endpoints OK
+- ✅ **Full live demo (2026-09-10):** 62/62 checks PASS, 42 endpoints, 5 roles — see `demo.md`
+- ✅ **Health-worker seed scoping FIXED:** `area: "Kamrup Rural"` → `"Hajo"`
+- ✅ **Consent API BUILT** (3 files + mounted) — full CRUD verified 6/6
+- ✅ **Notification API BUILT** (schema + migration + 3 files + mounted) — dead `notification.service.ts` wired up, verified 6/6
+- ✅ **Sync bug FIXED** — SESSION_START without `offlineEventId` now processes successfully (falls back to sessionId lookup)
+- ✅ **New-feature sweep:** 19/19 PASS (consents + notifications + sync fix), Playwright 20/20, Jest 35/35
+- ✅ **Python AI service BUILT** (`D:\SIH\ai-service`) — FastAPI, port 8000, PDF §23 compliant; backend bridge + fallback; pytest 29/29, live integration verified
+- ✅ **7 demo users ADDED** (`prisma/add-demo-users.ts`, `npm run add:users`) — demo1–demo7@test.com, no "Krishna"; total **19 users**; full sweep re-verified **80/80 PASS**
 
 ---
 
 ## Completed
 - [x] Backend setup (Express + TS)
-- [x] PostgreSQL + Prisma schema (15 models)
+- [x] PostgreSQL + Prisma schema (16 models)
 - [x] JWT auth (access + refresh tokens)
 - [x] Role-based access (4 roles)
 - [x] Patient CRUD (role-scoped)
@@ -36,35 +44,38 @@
 - [x] Test suite
 - [x] Demo seed data
 - [x] **Login/register validation bug FIXED**
+- [x] **Route-registration bugs FIXED**
+- [x] **Refresh token endpoint ADDED**
+- [x] **Personalization simplification DONE**
+- [x] **Playwright API test suite DONE** (20/20)
+- [x] **Multi-language seeded** (Assamese/Bengali/Meitei)
+- [x] **Full live demo sweep** (62/62 PASS)
+- [x] **Consent API DONE** (6 endpoints verified)
+- [x] **Notification API DONE** (model + migration + 5 endpoints verified)
+- [x] **Sync bug FIXED** (SESSION_START offlineEventId guard)
 
 ---
 
-## Pending — Backend
-### Done (this session)
-- [x] Fix insights double-prefix bug (`/:patientId/insights` under `/api/patients`)
-- [x] Fix alerts double-prefix bug (split patient-scoped router + `adminAlertRouter` under `/api/alerts`)
-- [x] Fix reminders list 404 (registered `reminderRouter` → `/api/patients/:patientId/reminders`)
-- [x] Fix reminders PATCH/DELETE mount (detail router now under `/api/reminders/:id`)
-- [x] Fix personalization GET shadowed (base routes → `/api/patients/:patientId/personalization`)
-- [x] Add refresh token endpoint (`POST /api/auth/refresh`)
-- [x] Rebuild + restart backend (PID verified on :3000)
-- [x] Re-run Jest (35/35) + HTTP end-to-end checks on all fixed routes
+## Pending — Backend (next session)
 
-### Remaining — Backend
-- [x] Personalization simplification DONE — VOICE level removed → 2 levels (GENERIC/FULL); DB migrated, tests 35/35
-- [ ] AI Python service (referenced, not implemented)
-- [x] Multi-language (Assamese/Bengali/Meitei — all seeded via localizations.ts)
-- [x] Full Playwright API test suite DONE — `tests/e2e/` (20/20): auth 4 roles, refresh/logout, patients, games, insights, sessions, alerts, family, health-worker, sync, personalization, assets, reminders; rate limit bumped to 500/15min
+### Done (2026-09-10)
+- [x] ~~Priority 1: Build Consent API~~ — `src/modules/consents/` → GET/POST `/api/patients/:patientId/consents` + GET/PATCH/DELETE `/api/consents/:id`. 6 consent types, unique `patientId+consentType` upsert. Verified 6/6.
+- [x] ~~Priority 2: Build Notification API~~ — `Notification` model + migration `20260910093612_add_notifications` + `src/modules/notifications/`. `notification.service.ts` `createNotification()` now writes to DB. Verified 6/6.
+- [x] ~~Priority 3: Fix Sync Bug~~ — `sync.service.ts` SESSION_START guards undefined `offlineEventId` (falls back to `sessionId` lookup). Verified live.
+- [x] ~~Priority 4: Build Python AI service~~ — `D:\SIH\ai-service` (FastAPI + uvicorn, port 8000). Endpoints: `/health`, `/ability`, `/difficulty`, `/trend`, `/decline`, `/explain`, `/analyze-session` — mirror of TS heuristics. Backend: `src/services/ai.client.ts` (HTTP bridge, 2s timeout), `ai.service.ts` now exports `*Remote` wrappers used in `selectNextActivity`, `analyzeSession`, `games.service` (recommended difficulty) and `insights.service` (trends). `AI_SERVICE_ENABLED=true` → Python; false/unreachable → TS fallback (no bug). pytest 29/29 PASS; Jest 35/35 PASS; live integration verified (Python log showed `/ability /trend /explain /decline` 200).
+
+### Remaining Backend
+- [ ] Integration tests (unit 35 + E2E 20 done, integration layer missing)
+- [ ] Logging/Monitoring (only Morgan)
 
 ---
 
-## Pending — Other (non-backend)
+## Pending — Non-backend
 - [ ] Frontend (not started)
 
 ---
 
 ## Master Completion Checklist (from Jugnu_Complete, 30 items)
-- ✅ Done: Node/Express, TypeScript, PostgreSQL, Prisma, Schema, Auth, Roles, Patients, Consent, Games, Sessions, Attempts, Personalization, AI Ability, Adaptive Difficulty, Personal Baseline, Trend Analysis, Clinical Review, Caregiver Dashboard, Health Worker API, Caregiver Mood, Connected Family, Notifications, Offline Sync, Security, Reminders, Docker (27)
-- ✅ Partial: Tests (integration layer missing; unit 35 + Playwright E2E 20/20 done). Migrations and Languages are now fully complete. (1)
-- ⚠️ Extra (outside 30): Logging/Monitoring (morgan only)
-- ✅ Done: Deployment (runbook + docker). CI/CD tests added.
+- ✅ Done: Node/Express, TypeScript, PostgreSQL, Prisma, Schema, Auth, Roles, Patients, Games, Sessions, Attempts, Personalization, AI Ability, Adaptive Difficulty, Personal Baseline, Trend Analysis, Clinical Review, Caregiver Dashboard, Health Worker API, Caregiver Mood, Connected Family, Offline Sync, Security, Reminders, Docker, Deployment, CI/CD, **Consent, Notifications, Sync bug fix, Python AI service** (31)
+- ⚠️ Partial: Tests (integration missing)
+- ⚠️ Extra: Logging/Monitoring (morgan only)

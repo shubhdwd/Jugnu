@@ -8,7 +8,14 @@ export async function createNotification(
   message: string,
   type: string,
 ): Promise<void> {
-  logger.info(`[Notification] To: ${userId} | Type: ${type} | Title: ${title} | Message: ${message}`);
+  try {
+    await prisma.notification.create({
+      data: { userId, title, message, type },
+    });
+    logger.info(`[Notification] Created for ${userId} | Type: ${type} | Title: ${title}`);
+  } catch (err) {
+    logger.error(`[Notification] Failed to create for ${userId}: ${err}`);
+  }
 }
 
 export async function sendReminder(reminderId: string): Promise<void> {
