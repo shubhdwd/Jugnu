@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  tests:
+    name: Lint, build + tests (unit & DB integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jugnu
+          POSTGRES_PASSWORD: jugnu
+          POSTGRES_DB: jugnu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jugnu -d jugnu"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://jugnu:jugnu@localhost:5432/jugnu
+      DIRECT_URL: postgresql://jugnu:jugnu@localhost:5432/jugnu
+      JWT_SECRET: ci-placeholder-jwt-secret
+      ENCRYPTION_KEY: ci-placeholder-encryption-key
+      NODE_ENV: test
+      CI: "true"
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        run: npx prisma db seed
+
+      - name: Typecheck (lint)
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit + DB integration tests
+        run: npm test
+
+  docker-build:
+    name: Docker image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t jugnu-backend:ci ./backend
