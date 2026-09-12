@@ -67,6 +67,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify migration applied
+        run: echo "SELECT column_name FROM information_schema.columns WHERE table_name='patients' AND column_name='displayName';" | npx prisma db execute --stdin
+
       - name: Unit + DB integration tests
         run: npm test
 

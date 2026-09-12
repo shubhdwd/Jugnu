@@ -1,6 +1,3 @@
--- AlterEnum
-ALTER TYPE "ReminderRepeat" ADD VALUE IF NOT EXISTS 'WEEKDAYS';
-
 -- CreateEnum
 CREATE TYPE "ReminderPriority" AS ENUM ('NORMAL', 'IMPORTANT');
 
