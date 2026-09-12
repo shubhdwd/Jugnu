@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ActivityView } from '@/components/patient/ActivityView'
 import { HandoffScreen } from '@/components/patient/HandoffScreen'
 import { PatientShell } from '@/components/patient/PatientShell'
@@ -17,7 +17,8 @@ import { useSessionEngine } from '@/session/useSessionEngine'
  */
 export function SessionScreen() {
   const navigate = useNavigate()
-  const { state, dispatch, currentUser } = useApp()
+  const { state, dispatch, currentUser, api } = useApp()
+  const [searchParams] = useSearchParams()
   const patient = usePatient()
   const patientName = patientLabel(patient, currentUser)
   const engine = useSessionEngine()
@@ -31,6 +32,7 @@ export function SessionScreen() {
   const onUnlocked = useCallback(
     (userId: string) => {
       engine.close()
+      void api.recordSession(patient.id, searchParams.get('game') ?? 'general')
       const user = state.users.find((u) => u.id === userId)
       dispatch({ type: 'signIn', userId })
       // The check-in belongs to the moment a caregiver is really back with the device,
@@ -39,7 +41,7 @@ export function SessionScreen() {
       if (user && user.layer !== 3 && !checkedInToday) dispatch({ type: 'requestMoodCheckIn' })
       navigate(user?.layer === 3 ? '/family' : '/', { replace: true })
     },
-    [dispatch, engine, navigate, state.users],
+    [api, dispatch, engine, navigate, patient.id, searchParams, state.users],
   )
 
   const closePin = useCallback(() => {

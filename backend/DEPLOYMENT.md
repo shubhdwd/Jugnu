@@ -45,7 +45,6 @@ is fine).
 | `NODE_ENV` | yes | `production` |
 | `PORT` | no | `3000` |
 | `CORS_ORIGIN` | no | `https://my-frontend.vercel.app` |
-| `AI_SERVICE_URL` | no | `http://my-ai-service:8000` |
 | `AI_SERVICE_ENABLED` | no | `false` |
 | `JWT_EXPIRES_IN` | no | `7d` |
 | `JWT_REFRESH_EXPIRES_IN` | no | `30d` |

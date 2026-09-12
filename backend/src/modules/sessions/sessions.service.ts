@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors';
+import { logger } from '../../utils/logger';
 import { CompletionStatus, GameDifficulty, Prisma } from '@prisma/client';
 import { analyzeSession, selectDifficulty } from '../../services/ai.service';
 import { checkCaregiverMoodAlerts } from '../../services/notification.service';
@@ -77,7 +78,7 @@ export async function endSession(sessionId: string, completionStatus: Completion
   });
 
   analyzeSession(sessionId).catch(err => {
-    console.error('AI analysis failed for session:', sessionId, err);
+    logger.error('sessions.ai_analysis_failed', { sessionId, error: err });
   });
 
   return updated;
@@ -128,7 +129,7 @@ export async function addMoodCheckin(patientId: string, mood: 'HAPPY' | 'NEUTRAL
   });
 
   checkCaregiverMoodAlerts(patientId).catch(err => {
-    console.error('Mood alert check failed:', err);
+    logger.error('sessions.mood_alert_failed', { error: err });
   });
 
   return checkin;

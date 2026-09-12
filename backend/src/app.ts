@@ -22,6 +22,11 @@ import healthWorkerRoutes from './modules/health-workers/health-workers.routes';
 import syncRoutes from './modules/sync/sync.routes';
 import consentRoutes, { consentRouter } from './modules/consents/consents.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
+import peopleRoutes from './modules/people/people.routes';
+import voiceNoteRoutes from './modules/voice-notes/voice-notes.routes';
+import { memoriesRouter } from './modules/memories/memories.routes';
+import inviteRoutes from './modules/invites/invites.routes';
+import moodEntryRoutes from './modules/mood-entries/mood-entries.routes';
 
 const app = express();
 
@@ -84,6 +89,11 @@ app.use('/api/patients', consentRouter);
 app.use('/api/consents', consentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/memories', memoriesRouter);
+app.use('/api/people', peopleRoutes);
+app.use('/api/voice-notes', voiceNoteRoutes);
+app.use('/api/invites', inviteRoutes);
+app.use('/api/mood-entries', moodEntryRoutes);
 
 // 404 handler
 app.use((_req, res) => {

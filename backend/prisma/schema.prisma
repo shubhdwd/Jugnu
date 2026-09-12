@@ -79,8 +79,28 @@ enum ReminderType {
 enum ReminderRepeat {
   NONE
   DAILY
+  WEEKDAYS
   WEEKLY
   CUSTOM
+}
+
+enum ReminderPriority {
+  NORMAL
+  IMPORTANT
+}
+
+enum MemoryStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
+enum PortraitTone {
+  AMBER
+  SAGE
+  LILAC
+  CLAY
+  DUSK
 }
 
 enum TrendDirection {
@@ -149,6 +169,12 @@ model User {
   email         String?  @unique
   passwordHash  String
   role          UserRole
+  pin           String?
+  layer         Int?
+  portraitTone  PortraitTone?
+  callsPatient  String?
+  canSeeTrends  Boolean  @default(false)
+  visibleMemoryIds String[]
   refreshTokens String[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -158,6 +184,8 @@ model User {
   familyMembers           FamilyMember[]
   healthWorker            HealthWorker?
   notifications           Notification[]
+  memoriesCreated         Memory[]
+  moodEntries             MoodEntry[]
 
   @@map("users")
 }
@@ -165,14 +193,20 @@ model User {
 model Patient {
   id              String   @id @default(uuid()) @db.Uuid
   name            String
+  displayName     String?
   age             Int
   gender          Gender
   language        String   @default("assamese")
+  region          String?
   village         String?
   location        String?
   roomWard        String?
   caregiverId     String   @db.Uuid
   profilePhotoUrl String?
+  portraitTone    PortraitTone?
+  voiceEnabled    Boolean  @default(true)
+  speechRate      Float    @default(0.85)
+  morningRoutine  String[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -182,10 +216,14 @@ model Patient {
   personalization   Personalization?
   reminders         Reminder[]
   moodCheckins      CaregiverMoodCheckin[]
+  moodEntries       MoodEntry[]
   insights          Insight[]
   alerts            Alert[]
   familyMembers     FamilyMember[]
   gameAssets        GameAsset[]
+  memories          Memory[]
+  people            Person[]
+  invites           Invite[]
 
   @@index([caregiverId])
   @@index([village])
@@ -344,10 +382,15 @@ model Reminder {
   type              ReminderType
   title             String
   message           String
+  time              String
   scheduledAt       DateTime
   repeatRule        ReminderRepeat @default(NONE)
   customRepeatRule  String?
+  priority          ReminderPriority @default(NORMAL)
   active            Boolean        @default(true)
+  completed         Boolean        @default(false)
+  note              String?
+  assignedToUserId  String?        @db.Uuid
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
@@ -486,4 +529,101 @@ model ResourcePack {
 
   @@unique([language, packKey])
   @@map("resource_packs")
+}
+
+// ─── New Models for Frontend Feature Parity ──────────────────────────────────
+
+model Person {
+  id              String        @id @default(uuid()) @db.Uuid
+  patientId       String        @db.Uuid
+  name            String
+  relationship    String
+  photoUrl        String?
+  portraitTone    PortraitTone  @default(SAGE)
+  isPatient       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  voiceNotes VoiceNote[]
+  memories  Memory[]
+
+  @@index([patientId])
+  @@map("people")
+}
+
+model VoiceNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  personId    String?  @db.Uuid
+  memoryId    String?  @db.Uuid
+  audioUrl    String?
+  transcript  String?
+  seconds     Int
+  recordedBy  String   @db.Uuid
+  recordedAt  DateTime @default(now())
+
+  person Person? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  memory Memory? @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
+  @@index([memoryId])
+  @@map("voice_notes")
+}
+
+model Memory {
+  id                  String       @id @default(uuid()) @db.Uuid
+  patientId           String       @db.Uuid
+  personId            String?      @db.Uuid
+  title               String
+  description         String
+  photoUrl            String?
+  createdByUserId     String       @db.Uuid
+  status              MemoryStatus @default(PENDING)
+  usableInActivities  Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  person      Person?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+  createdBy   User         @relation(fields: [createdByUserId], references: [id])
+  voiceNotes  VoiceNote[]
+
+  @@index([patientId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@map("memories")
+}
+
+model MoodEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  patientId String   @db.Uuid
+  userId    String   @db.Uuid
+  mood      String
+  note      String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([patientId])
+  @@index([userId])
+  @@index([date])
+  @@map("mood_entries")
+}
+
+model Invite {
+  id        String   @id @default(uuid()) @db.Uuid
+  patientId String   @db.Uuid
+  name      String
+  contact   String
+  layer     Int
+  status    String   @default("pending")
+  sentAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("invites")
 }

@@ -67,7 +67,7 @@ function useVoiceAvailable(language: LanguageCode): boolean {
 export function SettingsScreen() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, api, currentUser, can } = useApp()
   const patient = state.patient
   const voiceAvailable = useVoiceAvailable(patient.language)
 
@@ -163,14 +163,25 @@ export function SettingsScreen() {
         speechRate: draft.speechRate,
       },
     })
+    api.updatePatient(state.patient.id, {
+      name: draft.name,
+      age: draft.age,
+      region: draft.region,
+      language: draft.language,
+      personalizationLevel: draft.personalizationLevel,
+      voiceEnabled: draft.voiceEnabled,
+      speechRate: draft.speechRate,
+    })
     if (currentUser && trimmedCallName !== savedCallName) {
       dispatch({ type: 'updateUser', id: currentUser.id, patch: { callsPatient: trimmedCallName || undefined } })
+      api.updateUser(currentUser.id, { callsPatient: trimmedCallName || undefined })
     }
   }
 
   const applyNewPin = () => {
     if (!currentUser) return
     dispatch({ type: 'updateUser', id: currentUser.id, patch: { pin } })
+    api.updateUser(currentUser.id, { pin })
     setPin('')
     setPinConfirm('')
     setPinSaved(true)

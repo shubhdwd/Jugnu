@@ -13,5 +13,11 @@ export default defineConfig({
   server: {
     port: 5173,
     // Run `npm run dev -- --host` to reach the dev server from a tablet on the same wifi.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
 })

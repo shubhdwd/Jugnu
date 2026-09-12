@@ -34,7 +34,7 @@ const emptyDraft: Draft = { title: '', time: '09:00', repeat: 'daily', priority:
  * and can tick it off; adding, editing and removing stay with the primary caregiver.
  */
 export function RemindersScreen() {
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, currentUser, can, api, backendAvailable } = useApp()
   const [params] = useSearchParams()
   const [draft, setDraft] = useState<Draft | null>(params.get('new') ? emptyDraft : null)
   const [confirmDelete, setConfirmDelete] = useState<Reminder | null>(null)
@@ -59,8 +59,13 @@ export function RemindersScreen() {
       note: draft.note.trim() || undefined,
       assignedToUserId: draft.assignedToUserId || undefined,
     }
-    if (draft.id) dispatch({ type: 'updateReminder', id: draft.id, patch: payload })
-    else dispatch({ type: 'addReminder', reminder: payload })
+    if (draft.id) {
+      dispatch({ type: 'updateReminder', id: draft.id, patch: payload })
+      if (backendAvailable) api.updateReminder(draft.id, payload)
+    } else {
+      dispatch({ type: 'addReminder', reminder: payload })
+      if (backendAvailable) api.addReminder(state.patient.id, payload)
+    }
     setDraft(null)
   }
 
@@ -89,7 +94,10 @@ export function RemindersScreen() {
                   role="switch"
                   aria-checked={reminder.completed}
                   aria-label={`Mark ${reminder.title} as ${reminder.completed ? 'not done' : 'done'}`}
-                  onClick={() => dispatch({ type: 'toggleReminder', id: reminder.id })}
+                  onClick={() => {
+                    dispatch({ type: 'toggleReminder', id: reminder.id })
+                    if (backendAvailable) api.toggleReminder(reminder.id, !reminder.completed)
+                  }}
                   className={`mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 transition duration-200 ease-calm ${
                     reminder.completed ? 'border-sage-500 bg-sage-500 text-white' : 'border-line bg-paper text-transparent hover:border-glow-400'
                   }`}
@@ -250,7 +258,10 @@ export function RemindersScreen() {
               variant="danger"
               icon="trash"
               onClick={() => {
-                if (confirmDelete) dispatch({ type: 'deleteReminder', id: confirmDelete.id })
+                if (confirmDelete) {
+                  dispatch({ type: 'deleteReminder', id: confirmDelete.id })
+                  if (backendAvailable) api.deleteReminder(confirmDelete.id)
+                }
                 setConfirmDelete(null)
               }}
             >

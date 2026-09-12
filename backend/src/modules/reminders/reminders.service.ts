@@ -20,13 +20,17 @@ export async function create(data: {
   const patient = await prisma.patient.findUnique({ where: { id: data.patientId } });
   if (!patient) throw new NotFoundError('Patient not found');
 
+  const scheduledDate = new Date(data.scheduledAt);
+  const timeStr = `${String(scheduledDate.getHours()).padStart(2, '0')}:${String(scheduledDate.getMinutes()).padStart(2, '0')}`;
+
   return prisma.reminder.create({
     data: {
       patientId: data.patientId,
       type: data.type,
       title: data.title,
       message: data.message,
-      scheduledAt: new Date(data.scheduledAt),
+      time: timeStr,
+      scheduledAt: scheduledDate,
       repeatRule: data.repeatRule || 'NONE',
       customRepeatRule: data.customRepeatRule,
     },

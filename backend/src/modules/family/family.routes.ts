@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as controller from './family.controller';
 import auth from '../../middleware/auth.middleware';
+import { authorize } from '../../middleware/role.middleware';
 import { validate } from '../../middleware/validate.middleware';
 import { z } from 'zod';
 
@@ -15,8 +16,8 @@ const inviteSchema = z.object({
   }),
 });
 
-router.post('/', auth, validate(inviteSchema), controller.invite);
+router.post('/', auth, authorize('FAMILY_CAREGIVER', 'ADMIN'), validate(inviteSchema), controller.invite);
 router.get('/members/:patientId', auth, controller.getByPatient);
-router.delete('/member/:id', auth, controller.remove);
+router.delete('/member/:id', auth, authorize('FAMILY_CAREGIVER', 'ADMIN'), controller.remove);
 
 export default router;

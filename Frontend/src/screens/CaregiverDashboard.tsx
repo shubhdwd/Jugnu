@@ -28,7 +28,7 @@ import { useApp } from '@/state/AppContext'
  */
 export function CaregiverDashboard() {
   const navigate = useNavigate()
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, currentUser, can, api } = useApp()
   const [profileOpen, setProfileOpen] = useState(false)
   const [recordOpen, setRecordOpen] = useState(false)
 
@@ -201,7 +201,10 @@ export function CaregiverDashboard() {
         open={state.pendingMoodCheckIn && can.moodCheckIn}
         name={currentUser.name}
         onSkip={() => dispatch({ type: 'dismissMoodCheckIn' })}
-        onSelect={(mood) => dispatch({ type: 'addMood', mood, userId: currentUser.id })}
+        onSelect={(mood) => {
+          dispatch({ type: 'addMood', mood, userId: currentUser.id })
+          void api.addMood(patient.id, mood)
+        }}
       />
 
       {/* One-time nudge after the very first sign-in. */}

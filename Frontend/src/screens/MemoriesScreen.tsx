@@ -113,7 +113,7 @@ function MemoryRow({ memory, person, authorName, onPlay, onToggle, onDelete, onA
  * contributions still on the way.
  */
 export function MemoriesScreen() {
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, api, backendAvailable, currentUser, can } = useApp()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState<Memory | null>(null)
 
@@ -171,12 +171,14 @@ export function MemoriesScreen() {
                 onPlay={() => playMemory(memory, language, speechRate)}
                 onApprove={
                   can.approveContributions
-                    ? () =>
+                    ? () => {
                         dispatch({
                           type: 'updateMemory',
                           id: memory.id,
                           patch: { status: 'approved', usableInActivities: true },
                         })
+                        if (backendAvailable) api.approveMemory(memory.id)
+                      }
                     : undefined
                 }
                 onDecline={can.approveContributions ? () => setConfirmDelete(memory) : undefined}
@@ -197,7 +199,10 @@ export function MemoriesScreen() {
                 onPlay={() => playMemory(memory, language, speechRate)}
                 onToggle={
                   can.editAnyMemory
-                    ? (next) => dispatch({ type: 'updateMemory', id: memory.id, patch: { usableInActivities: next } })
+                    ? (next) => {
+                        dispatch({ type: 'updateMemory', id: memory.id, patch: { usableInActivities: next } })
+                        if (backendAvailable) api.updateMemory(memory.id, { usableInActivities: next })
+                      }
                     : undefined
                 }
                 onDelete={can.editAnyMemory ? () => setConfirmDelete(memory) : undefined}
@@ -253,7 +258,13 @@ export function MemoriesScreen() {
               variant="danger"
               icon="trash"
               onClick={() => {
-                if (confirmDelete) dispatch({ type: 'deleteMemory', id: confirmDelete.id })
+                if (confirmDelete) {
+                  dispatch({ type: 'deleteMemory', id: confirmDelete.id })
+                  if (backendAvailable) {
+                    if (confirmDelete.status === 'pending') api.declineMemory(confirmDelete.id)
+                    else api.deleteMemory(confirmDelete.id)
+                  }
+                }
                 setConfirmDelete(null)
               }}
             >

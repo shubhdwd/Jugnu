@@ -80,7 +80,7 @@ export function MemoryComposerScreen() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const gameParam = searchParams.get('game')
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, api, currentUser, can } = useApp()
   const rec = useRecorder()
 
   const family = state.people.filter((p) => !p.isPatient)
@@ -135,6 +135,7 @@ export function MemoryComposerScreen() {
         type: 'addPerson',
         person: { id: linkedPersonId, name: newName.trim(), relationship: newRelationship, portraitTone: 'dusk', photoUrl },
       })
+      api.addPerson({ patientId: state.patient.id, id: linkedPersonId, name: newName.trim(), relationship: newRelationship, portraitTone: 'dusk', photoUrl })
     }
 
     const voiceNote: VoiceNote | undefined =
@@ -161,6 +162,17 @@ export function MemoryComposerScreen() {
         status: can.approveContributions ? 'approved' : 'pending',
         usableInActivities: can.approveContributions ? useInActivities : false,
       },
+    })
+    api.addMemory({
+      patientId: state.patient.id,
+      title: title.trim(),
+      description: description.trim(),
+      personId: linkedPersonId,
+      photoUrl,
+      voiceNote,
+      createdByUserId: currentUser.id,
+      status: can.approveContributions ? 'approved' : 'pending',
+      usableInActivities: can.approveContributions ? useInActivities : false,
     })
     setSaved(true)
   }

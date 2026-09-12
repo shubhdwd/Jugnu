@@ -17,3 +17,10 @@ export async function getById(req: Request, res: Response, next: NextFunction) {
     sendSuccess(res, user);
   } catch (err) { next(err); }
 }
+
+export async function update(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = await service.update(req.params.id as string, req.body);
+    sendSuccess(res, user, 'User updated successfully');
+  } catch (err) { next(err); }
+}

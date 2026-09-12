@@ -31,7 +31,7 @@ const layerBlurb: Record<2 | 3, string> = {
  * each person may do; a helper can see the circle but not change it.
  */
 export function CircleScreen() {
-  const { state, dispatch, currentUser, can } = useApp()
+  const { state, dispatch, api, currentUser, can } = useApp()
   const patientName = patientLabel(state.patient, currentUser)
   const [invite, setInvite] = useState<InviteDraft | null>(null)
   const [assigning, setAssigning] = useState<string | null>(null)
@@ -50,6 +50,7 @@ export function CircleScreen() {
   const sendInvite = () => {
     if (!invite || !invite.name.trim() || !inviteEmailOk) return
     dispatch({ type: 'invite', name: invite.name.trim(), contact: invite.contact.trim(), layer: invite.layer })
+    api.invite({ patientId: state.patient.id, name: invite.name.trim(), contact: invite.contact.trim(), layer: invite.layer })
     setInvite(null)
   }
 
@@ -298,6 +299,7 @@ export function CircleScreen() {
               icon="close"
               onClick={() => {
                 if (revoking) dispatch({ type: 'revokeInvite', id: revoking })
+                if (revoking) api.revokeInvite(revoking)
                 setRevoking(null)
               }}
             >

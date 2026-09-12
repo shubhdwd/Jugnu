@@ -34,7 +34,7 @@ function SubtleRings() {
 }
 
 export function SignUpScreen() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, backendAvailable, api } = useApp()
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -44,9 +44,17 @@ export function SignUpScreen() {
 
   const primary = state.users.find((u) => u.layer === 1)
 
-  const askWhichMode = () => {
+  const askWhichMode = async () => {
     if (connecting) return
     setConnecting(true)
+    if (backendAvailable && name && email && password) {
+      try {
+        await api.register({ name, email, password })
+        setConnecting(false)
+        setPickingMode(true)
+        return
+      } catch { /* fall through to demo mode */ }
+    }
     window.setTimeout(() => {
       setConnecting(false)
       setPickingMode(true)

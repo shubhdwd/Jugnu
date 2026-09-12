@@ -34,24 +34,49 @@ function SubtleRings() {
 }
 
 export function SignInScreen() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, backendAvailable, api } = useApp()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [pickingDemo, setPickingDemo] = useState(false)
+  const [error, setError] = useState('')
+  void error // will be shown in UI once error display is added
 
   const primary = state.users.find((u) => u.layer === 1)
 
-  const googleSignIn = () => {
+  const googleSignIn = async () => {
     if (!primary || connecting) return
     setConnecting(true)
+    setError('')
+    if (backendAvailable && email) {
+      try {
+        await api.login(email, password || 'demo123')
+        setConnecting(false)
+        return
+      } catch { /* fall through to demo */ }
+    }
     window.setTimeout(() => dispatch({ type: 'signIn', userId: primary.id }), 700)
   }
 
-  const emailSignIn = () => {
+  const emailSignIn = async () => {
     if (!primary || connecting) return
     setConnecting(true)
+    setError('')
+    if (backendAvailable) {
+      try {
+        await api.login(email, password)
+        setConnecting(false)
+        return
+      } catch (err: any) {
+        setError(err.message || 'Login failed. Falling back to demo mode.')
+        window.setTimeout(() => {
+          dispatch({ type: 'signIn', userId: primary.id })
+          setConnecting(false)
+        }, 500)
+        return
+      }
+    }
     window.setTimeout(() => dispatch({ type: 'signIn', userId: primary.id }), 700)
   }
 
