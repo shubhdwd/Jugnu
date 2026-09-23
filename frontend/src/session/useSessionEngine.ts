@@ -164,6 +164,20 @@ export function useSessionEngine(): SessionEngine {
     if (results.current.length) record(false)
   }, [record])
 
+  const playNote = useCallback(
+    (target: ActivityStep | null) => {
+      const note = target?.voicePerson?.voiceNote
+      if (!note) return
+      if (note.audioUrl) {
+        const audio = new Audio(note.audioUrl)
+        void audio.play().catch(() => p.sayText(note.transcript ?? ''))
+        return
+      }
+      if (note.transcript) p.sayText(note.transcript)
+    },
+    [p],
+  )
+
   /** Speak, then show, the prompt for whichever step is now current. */
   const openStep = useCallback(
     (next: ActivityStep) => {
@@ -173,9 +187,10 @@ export function useSessionEngine(): SessionEngine {
       setPhase('activity')
       setPromptText(next.prompt)
       stepStartRef.current = Date.now()
-      p.sayText(next.prompt)
+      if (next.kind === 'voiceRecall') p.sayText(next.prompt, () => playNote(next))
+      else p.sayText(next.prompt)
     },
-    [p],
+    [p, playNote],
   )
 
   const advance = useCallback(() => {
@@ -262,16 +277,7 @@ export function useSessionEngine(): SessionEngine {
     if (promptText) p.sayText(promptText)
   }, [p, promptText])
 
-  const playVoiceNote = useCallback(() => {
-    const note = step?.voicePerson?.voiceNote
-    if (!note) return
-    if (note.audioUrl) {
-      const audio = new Audio(note.audioUrl)
-      void audio.play().catch(() => p.sayText(note.transcript ?? ''))
-      return
-    }
-    if (note.transcript) p.sayText(note.transcript)
-  }, [p, step])
+  const playVoiceNote = useCallback(() => playNote(step), [playNote, step])
 
   /** Handoff: the greeting is spoken while the caregiver is still holding the device. */
   useEffect(() => {
@@ -285,13 +291,6 @@ export function useSessionEngine(): SessionEngine {
     // Runs once, at the top of the session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  /** Level-2 voice recall plays the recording as soon as the question has been asked. */
-  useEffect(() => {
-    if (phase !== 'activity' || step?.kind !== 'voiceRecall') return
-    const id = window.setTimeout(playVoiceNote, 2600)
-    return () => window.clearTimeout(id)
-  }, [phase, step, playVoiceNote])
 
   return {
     phase,

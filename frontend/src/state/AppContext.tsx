@@ -328,14 +328,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     addReminder: async (pid, data) => {
       await remindersApi.createReminder(pid, data as any)
-      dispatch({ type: 'addReminder', reminder: {
-        title: data.title as string,
-        time: (data.time as string) || '09:00',
-        repeat: (data.repeatRule as any) || 'daily',
-        priority: (data.priority as any) || 'normal',
-        note: data.note as string,
-        assignedToUserId: data.assignedToUserId as string,
-      }})
     },
 
     updateReminder: async (id, data) => {
@@ -410,7 +402,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     invite: async (data) => {
       await invitesApi.createInvite(data as any)
-      dispatch({ type: 'invite', name: data.name as string, contact: data.contact as string, layer: data.layer as 2 | 3 })
     },
 
     revokeInvite: async (id) => {

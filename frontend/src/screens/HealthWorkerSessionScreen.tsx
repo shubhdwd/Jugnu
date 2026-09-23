@@ -10,6 +10,7 @@ import type { FacilityResident } from '@/data/facility'
 import { getResidents, getWorkerPin } from '@/data/facility'
 import { t } from '@/lib/i18n'
 import { voice } from '@/lib/voice'
+import { useSpeaking } from '@/hooks/useSpeaking'
 import { buildConfirmStep, buildPlan, type ActivityStep } from '@/session/plan'
 import type { LanguageCode, Memory, Person } from '@/types'
 
@@ -338,6 +339,7 @@ function FacilityNotFound() {
 }
 
 function FacilityActivityView({ engine, lang }: { engine: FacilityEngine; lang: LanguageCode }) {
+  const speaking = useSpeaking()
   const { step, feedback } = engine
   if (!step) return null
 
@@ -392,7 +394,7 @@ function FacilityActivityView({ engine, lang }: { engine: FacilityEngine; lang: 
               compact={step.options.length >= 3}
               state={tileState(option.id, option.correct)}
               placedIndex={placedAt >= 0 ? placedAt + 1 : undefined}
-              disabled={!answering || placedAt >= 0}
+              disabled={!answering || speaking || placedAt >= 0}
               onSelect={() => engine.answer(option.id)}
             />
           )

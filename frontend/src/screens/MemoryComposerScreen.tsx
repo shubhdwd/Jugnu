@@ -33,9 +33,12 @@ function useRecorder() {
   const ticker = useRef<number | null>(null)
 
   const stop = useCallback(() => {
-    recorder.current?.stop()
-    recorder.current?.stream.getTracks().forEach((t) => t.stop())
+    const mr = recorder.current
     recorder.current = null
+    // Stop the mic only after MediaRecorder has flushed its final chunk in onstop;
+    // stopping the tracks here can drop that chunk and truncate the clip.
+    if (mr && mr.state !== 'inactive') mr.stop()
+    else mr?.stream.getTracks().forEach((t) => t.stop())
     if (ticker.current !== null) window.clearInterval(ticker.current)
     ticker.current = null
     setS((prev) => ({ ...prev, recording: false }))
@@ -55,6 +58,7 @@ function useRecorder() {
       mr.ondataavailable = (e) => chunks.current.push(e.data)
       mr.onstop = () => {
         const blob = new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' })
+        mr.stream.getTracks().forEach((t) => t.stop())
         setS((prev) => ({ ...prev, audioUrl: URL.createObjectURL(blob) }))
       }
       mr.start()

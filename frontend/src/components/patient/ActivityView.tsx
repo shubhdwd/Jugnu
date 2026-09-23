@@ -4,6 +4,7 @@ import { Illustration } from '@/components/ui/Illustration'
 import { ChoiceTile, type TileState } from './ChoiceTile'
 import type { SessionEngine } from '@/session/useSessionEngine'
 import { usePersonalization } from '@/state/personalization'
+import { useSpeaking } from '@/hooks/useSpeaking'
 
 // 3 cards → 2-up, 1 centered below  (last child spans 2 cols, centered)
 // 4 cards → 2×2 grid
@@ -21,6 +22,7 @@ const gridClass: Record<number, string> = {
  */
 export function ActivityView({ engine }: { engine: SessionEngine }) {
   const p = usePersonalization()
+  const speaking = useSpeaking()
   const { step, feedback, phase } = engine
   if (!step) return null
 
@@ -108,7 +110,7 @@ export function ActivityView({ engine }: { engine: SessionEngine }) {
               compact={step.options.length >= 3}
               state={tileState(option.id, option.correct)}
               placedIndex={placedAt >= 0 ? placedAt + 1 : undefined}
-              disabled={!answering || placedAt >= 0}
+              disabled={!answering || speaking || placedAt >= 0}
               onSelect={() => engine.answer(option.id)}
             />
           )

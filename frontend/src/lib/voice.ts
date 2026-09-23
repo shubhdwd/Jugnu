@@ -250,8 +250,11 @@ class VoiceService {
     // some speak more slowly than any estimate. Poll the engine instead of guessing —
     // if it never starts, advance straight away rather than making her sit through a
     // silent estimate; if it is still talking, keep waiting so nothing is cut off.
+    // Chrome also reports speaking=false for a single poll between sentence chunks, so
+    // two consecutive idle polls are required before treating speech as finished.
     const started = Date.now()
     let everBusy = false
+    let idleStreak = 0
     const tick = () => {
       if (turn !== this.turn) return
       try {
@@ -260,7 +263,10 @@ class VoiceService {
         /* ignore */
       }
       const busy = window.speechSynthesis.speaking || window.speechSynthesis.pending
-      if (busy) everBusy = true
+      if (busy) {
+        everBusy = true
+        idleStreak = 0
+      }
       const elapsed = Date.now() - started
       if (!everBusy && elapsed >= DROPPED_AFTER) {
         // Accepted and never started. That is the signature of a network voice whose
@@ -273,7 +279,14 @@ class VoiceService {
         finish()
         return
       }
-      if ((busy || !everBusy) && elapsed < HARD_CAP) {
+      if (everBusy && !busy) {
+        idleStreak += 1
+        if (idleStreak >= 2 || elapsed >= HARD_CAP) {
+          finish()
+          return
+        }
+      }
+      if (elapsed < HARD_CAP) {
         this.track(window.setTimeout(tick, POLL))
         return
       }
