@@ -73,9 +73,10 @@ self.addEventListener('fetch', (event) => {
         .then((response) => {
           if (response.ok) {
             const clone = response.clone()
+            const clone2 = response.clone()
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, clone)
-              cache.put('/index.html', clone)
+              cache.put('/index.html', clone2)
             })
           }
           return response
